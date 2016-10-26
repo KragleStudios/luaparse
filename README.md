@@ -1,46 +1,13 @@
 # luaparse
-Implementation of various parsing algorithms for LL(1), LR(0) and LR(1) grammars in Lua
+Implementation of various parsing algorithms for LL(1), LR(0) and LR(1) grammars in Lua.
 
+## Project Goals
+ - include a lexer that supports formal regex operations
+    - union, concatenation, klene closure, complement
+ - include a parser that generates !!FAST!! LL(1) recursive descent parsers for simple grammars
+ - include a parser that generates more powerful LR(1) bottom up parser capable of parsing the grammar for lua
+ - include an example project that parses JSON
+ - include an example project that parses the Lua language and shortens variable names 
 
-want to make a JSON parser? (not all of this is implemented yet but it is coming...)
-
-```Lua
-local json = grammar {
-    "S -> Item", function(item) return item end,
-    "Array -> [ List ]", function(_1, list, _2)
-        return list
-    end,
-    "List -> Item List'", function(item, listPrime)
-        table.insert(listPrime, item) -- because of limitations of LL(1) this will make items appear in reverse order sadness
-        return listPrime
-    end,
-    "      | EPSILON", function() return {} end,
-    "List' -> , Item List'", function(item, listPrime)
-        table.insert(listPrime, item)
-        return listPrime
-    end,
-    "      | EPSILON", function() return {} end,
-    "Item -> Array", function(array) return array end,
-    "      | Dictionary", function(dict) return dict end,
-    "      | value", function(value) return tostring(value) end, -- since this is a token
-    "Dictionary -> { KVPairs }", function(_1, kvpairs, _2)
-        return kvpairs
-    end,
-    "KVPairs -> Item : Item KVPairs'", function(key, value, kvpairs)
-        kvpairs[key] = value
-    end,
-    "         | EPSILON", function() return {} end,
-    "KVPairs' -> Item : Item , KVPairs'", function(key, value, kvpairs)
-        kvpairs[key] = value
-    end,
-    "         | EPSILON", function() return {} end,
-}
-```
-would define the entire parser. want to parse some json?
-```
-json.parse(jsonlexer.lex([[
-[
-   "item1",
-   "item2",
-   "item3",
-]))
+## Currently Implemented 
+ - initial version of LL(1) recursive descent parser with prediction table generation but no parsing 
