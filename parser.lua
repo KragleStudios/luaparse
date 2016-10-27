@@ -251,24 +251,37 @@ local g = grammar {
 }
 
 local json = grammar {
-    "S -> Item",
-    "Array -> [ List ]",
-    "List -> Item List'",
-    "      | EPSILON",
-    "List' -> , Item List'",
-    "      | EPSILON",
-    "Item -> Array",
-    "      | Dictionary",
-    "      | value",
-    "Dictionary -> { KVPairs }",
-    "KVPairs -> KVPair KVPairs'",
-    "         | EPSILON",
-    "KVPairs' -> KVPair , KVPairs'",
-    "         | EPSILON",
-    "KVPair -> key : Item",
+    "S -> Item", function(item) return item end,
+    "Array -> [ List ]", function(_1, list, _2)
+        return list
+    end,
+    "List -> Item List'", function(item, listPrime)
+        table.insert(listPrime, item) -- because of limitations of LL(1) this will make items appear in reverse order sadness
+        return listPrime
+    end,
+    "      | EPSILON", function() return {} end,
+    "List' -> , Item List'", function(item, listPrime)
+        table.insert(listPrime, item)
+        return listPrime
+    end,
+    "      | EPSILON", function() return {} end,
+    "Item -> Array", function(array) return array end,
+    "      | Dictionary", function(dict) return dict end,
+    "      | value", function(value) return tostring(value) end, -- since this is a token
+    "Dictionary -> { KVPairs }", function(_1, kvpairs, _2)
+        return kvpairs
+    end,
+    "KVPairs -> Item : Item KVPairs'", function(key, value, kvpairs)
+        kvpairs[key] = value
+    end,
+    "         | EPSILON", function() return {} end,
+    "KVPairs' -> Item : Item , KVPairs'", function(key, value, kvpairs)
+        kvpairs[key] = value
+    end,
+    "         | EPSILON", function() return {} end,
 }
 
-g = json
+local g = json
 
 local firsts = {}
 for nonterm in pairs(g) do
@@ -281,7 +294,7 @@ for nonterm in pairs(g) do
 end
 
 local predictions = {}
-for nonterm in pairs(g) do
+for nonterm in pairs(g) dI o
     g:predictions(nonterm, predictions, firsts, follows)
 end
 
