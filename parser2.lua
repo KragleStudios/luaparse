@@ -1,10 +1,9 @@
 require 'set'
 require 'string_util'
 require 'list_util'
+require 'constants'
 
-epsilon = 'epsilon'
-epsilonSet = set {epsilon}
-
+local epsilonSet = set {epsilon}
 
 local grammar_mt = {}
 grammar_mt.__index = grammar_mt
@@ -126,6 +125,8 @@ function grammar_mt:follow(symbol)
     if self.followset[symbol] then return self.followset[symbol] end
 
     local followSet = set()
+    self.followset[symbol] = followSet
+
     if self.productions[1].nonterm == symbol then
         followSet['$'] = true
     end
@@ -138,7 +139,6 @@ function grammar_mt:follow(symbol)
             elseif adding then
                 local f = self:first(var)
                 local toAdd = f - epsilonSet
-                assert(#followSet:intersect(toAdd) == 0, "conflict on " .. tostring(var))
                 followSet:union(toAdd)
                 if not f[epsilon] then
                     adding = false
@@ -147,23 +147,71 @@ function grammar_mt:follow(symbol)
         end
         if adding and production.nonterm ~= symbol then
             local toAdd = self:follow(production.nonterm)
-            assert(#followSet:intersect(toAdd) == 0, "conflict")
             followSet:union(toAdd)
         end
     end
-    self.followset[symbol] = followSet
     return followSet
 end
 
-function grammar_mt:parsetable()
-    for nonterm in pairs(self.nonterminals) do
-        -- TODO !
+function grammar_mt:ll1parsetable()
+
+    if self.llparsetable then return self.llparsetable end
+
+    local parsetable = {}
+
+    for k, production in ipairs(self.productions) do
+        if not parsetable[production.nonterm] then parsetable[production.nonterm] = {} end
+
+        local f = self:first(production)
+        if f[epsilon] then
+            for var in pairs(self:follow(production.nonterm)) do
+                if parsetable[production.nonterm][var] and parsetable[production.nonterm][var] ~= production then
+                    error("conflict")
+                end
+                parsetable[production.nonterm][var] = production
+            end
+        end
+
+        for var in pairs(f - epsilonSet) do
+            if parsetable[production.nonterm][var] and parsetable[production.nonterm][var] ~= production then
+                error("conflict")
+            end
+            parsetable[production.nonterm][var] = production
+        end
     end
+
+    self.llparsetable = parsetable
+
+    return parsetable
 end
 
-local g = grammar([[
-  A -> B C
-  B -> a
-  C -> c B
-]])
-print('follow of B: ' .. tostring(g:follow('B')))
+
+
+--[[
+local g = grammar(
+S -> A B
+S -> C d
+A -> a
+A -> B f
+B -> b
+B -> epsilon
+C -> c
+C -> epsilon
+)
+]]
+
+-- TODO: define a grammar for regular expressions and then generate a parser that
+--       cleanly parses it!
+local g = [[
+]]
+
+-- print follow set
+print("FIRST")
+for v in pairs(g.nonterminals) do
+    print('FI(' .. v .. ') = ' .. tostring(g:first(v)))
+end
+
+print("FOLLOW")
+for v in pairs(g.nonterminals) do
+    print('FO(' .. v .. ') = ' .. tostring(g:follow(v)))
+end

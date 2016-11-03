@@ -1,3 +1,8 @@
+local function tostringstack(a, ...)
+    if a == nil then return end
+    return tostring(a), tostringstack(...)
+end
+
 local set_mt = {
     __sub = function(a, b)
         local c = set()
@@ -8,6 +13,7 @@ local set_mt = {
         end
         return c
     end,
+
     __add = function(a, b)
         local c = set()
         for k,v in pairs(a) do
@@ -19,13 +25,24 @@ local set_mt = {
         return c
     end,
 
+    __eq = function(a, b)
+        for k,v in pairs(a) do
+            if not b[k] then return false end
+        end
+
+        for k,v in pairs(b) do
+            if not a[k] then return false end
+        end
+        return true
+    end,
+
     __tostring = function(self)
         local l = {}
         for k,v in pairs(self) do
             table.insert(l, k)
         end
         table.sort(l)
-        return 'set(' .. table.concat(l, ', ') .. ')'
+        return 'set(' .. table.concat({tostringstack(unpack(l))}, ', ') .. ')'
     end,
 
     __len = function(self)
